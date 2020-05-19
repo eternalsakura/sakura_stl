@@ -22,8 +22,19 @@ __STL_BEGIN_NAMESPACE
     }
 
     template<class _Tp>
+    void destroy_one(_Tp *, __true_type) {}
+
+    template<class _Tp>
+    void destroy_one(_Tp *pointer, __false_type) {
+        if (pointer != nullptr) {
+            pointer->~Ty();
+        }
+    }
+
+    template<class _Tp>
     inline void _Destroy(_Tp *__pointer) {
-        __pointer->~Tp();
+        destroy_one(__pointer, typename __type_traits<_Tp>::has_trivial_destructor());
+//        __pointer->~Tp();
     }
 
     template<class _ForwardIterator>

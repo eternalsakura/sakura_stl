@@ -189,18 +189,20 @@ __STL_BEGIN_NAMESPACE
         return true;
     }
 
-    //lexicographical_compare
+//--------------------------------------------------
+// lexicographical_compare and lexicographical_compare_3way.
+// (the latter is not part of the C++ standard.)
+
     template<class _InputIter1, class _InputIter2>
-    bool lexicographical_compare(_InputIter1 __first1, _InputIter1 __last1, _InputIter2 __first2, _InputIter2 __last2) {
+    bool lexicographical_compare(_InputIter1 __first1, _InputIter1 __last1,
+                                 _InputIter2 __first2, _InputIter2 __last2) {
         for (; __first1 != __last1 && __first2 != __last2; ++__first1, ++__first2) {
-            if (*__first1 < *__first2) {
+            if (*__first1 < *__first2)
                 return true;
-            }
-            if (*__first2 < *__first1) {
+            if (*__first2 < *__first1)
                 return false;
-            }
-            return __first1 == __last1 && __first2 != __last2;
         }
+        return __first1 == __last1 && __first2 != __last2;
     }
 
     template<class _InputIter1, class _InputIter2, class _Compare>
@@ -225,14 +227,6 @@ __STL_BEGIN_NAMESPACE
         const size_t __len2 = __last2 - __first2;
         const int __result = memcmp(__first1, __first2, min(__len1, __len2));
         return __result != 0 ? __result < 0 : __len1 < __len2;
-    }
-
-    inline bool lexicographical_compare(const char *__first1, const char *__last1,
-                                        const char *__first2, const char *__last2) {
-        return lexicographical_compare((const signed char *) __first1,
-                                       (const signed char *) __last1,
-                                       (const signed char *) __first2,
-                                       (const signed char *) __last2);
     }
 
 __STL_END_NAMESPACE

@@ -9,7 +9,7 @@
 #include "stl_alloc.h"
 #include "stl_iterator.h"
 #include "stl_algo.h"
-
+#include "stl_vector.h"
 __STL_BEGIN_NAMESPACE
     template<class _Val>
     struct _Hashtable_node {
@@ -165,16 +165,30 @@ __STL_BEGIN_NAMESPACE
         typedef _Hashtable_node<_Val> _Node;
     public:
         typedef typename _Alloc_traits<_Val, _Alloc>::allocator_type allocator_type;
-        allocator_type get_allocator() const{
+
+        allocator_type get_allocator() const {
             return _M_node_allocator;
         }
 
     private:
         typename _Alloc_traits<_Node, _Alloc>::allocator_type _M_node_allocator;
-        _Node* _M_get_node(){
-            return
+
+        _Node *_M_get_node() {
+            return _M_node_allocator.allocate(1);
         }
 
+        void _M_put_node(_Node *__p) {
+            _M_node_allocator.deallocate(__p, 1);
+        }
+
+#define __HASH_ALLOC_INIT(__a) _M_node_allocator(__a),
+    private:
+        hasher _M_hash;
+        key_equal _M_equals;
+        _ExtractKey _M_get_key;
+        vector<_Node*, _Alloc> _M_buckets;
+        size_type _M_num_elements;
+    public:
     };
 __STL_END_NAMESPACE
 #endif //SAKURA_STL_STL_HASHTABLE_H

@@ -134,7 +134,7 @@ __STL_BEGIN_NAMESPACE
         typedef typename _Alloc_traits<_List_node<_Tp>, _Allocator>::_Alloc_type
                 _Alloc_type;
 
-        _List_node<_Tp> *_M_get_node() { return _Alloc_type::allocate(1); }
+        _List_node<_Tp> *_M_get_node() {return _Alloc_type::allocate(1); }
 
         void _M_put_node(_List_node<_Tp> *__p) { _Alloc_type::deallocate(__p, 1); }
 
@@ -150,22 +150,22 @@ __STL_BEGIN_NAMESPACE
 
         _List_base(const allocator_type &__a) : _Base(__a) {
             this->_M_node = this->_M_get_node();
-            this->_M_next = this->_M_node;
-            this->_M_prev = this->_M_node;
+            this->_M_node->_M_next = this->_M_node;
+            this->_M_node->_M_prev = this->_M_node;
         }
 
         ~_List_base() {
             clear();
-            _M_put_node(this->_M_node);
+            this->_M_put_node(this->_M_node);
         }
 
         void clear() {
-            _List_node<_Tp> *__cur = (_List_node<_Tp> *) (this->_M_node)._M_next;
+            _List_node<_Tp> *__cur = (_List_node<_Tp> *) (this->_M_node)->_M_next;
             while (__cur != this->_M_node) {
                 _List_node<_Tp> *__tmp = __cur;
                 __cur = (_List_node<_Tp> *) __cur->_M_next;
                 _Destroy(&__tmp->_M_data);
-                _M_put_node(__tmp);
+                this->_M_put_node(__tmp);
             }
             this->_M_node->_M_next = this->_M_node;
             this->_M_node->_M_prev = this->_M_node;
@@ -188,7 +188,8 @@ __STL_BEGIN_NAMESPACE
         typedef ptrdiff_t difference_type;
         typedef typename _Base::allocator_type allocator_type;
 
-        allocator_type get_allocator() const { return _Base::get_allocator(); }
+        allocator_type get_allocator() const {
+            return _Base::get_allocator(); }
 
     public:
         typedef _List_iterator<_Tp, _Tp &, _Tp *> iterator;
@@ -528,6 +529,14 @@ __STL_BEGIN_NAMESPACE
         for (; __first != __last; ++__first) {
             insert(__pos, *__first);
         }
+    }
+
+    template<class _Tp, class _Alloc>
+    void
+    list<_Tp, _Alloc>::_M_fill_insert(iterator __position,
+                                      size_type __n, const _Tp &__x) {
+        for (; __n > 0; --__n)
+            insert(__position, __x);
     }
 
     //移除范围 [first; last) 中的元素。后随最后移除元素的迭代器。若 pos 指代末元素，则返回 end() 迭代器。
