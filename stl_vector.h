@@ -151,7 +151,7 @@ __STL_BEGIN_NAMESPACE
             return (*this)[__n];
         }
 
-        explicit vector(const allocator_type &__a = allocator_type()) {
+        explicit vector(const allocator_type &__a = allocator_type()) : _Base(__a) {
         }
 
         vector(size_type __n, const _Tp &__value, const allocator_type &__a = allocator_type()) : _Base(__n, __a) {

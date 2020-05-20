@@ -10,6 +10,7 @@
 #include "stl_iterator.h"
 #include "stl_algo.h"
 #include "stl_vector.h"
+#include "stl_pair.h"
 
 __STL_BEGIN_NAMESPACE
     template<class _Val>
@@ -160,6 +161,10 @@ __STL_BEGIN_NAMESPACE
         typedef value_type &reference;
         typedef const value_type &const_reference;
 
+        hasher hash_funct() const { return _M_hash; }
+
+        key_equal key_eq() const { return _M_equals; }
+
     private:
         typedef _Hashtable_node<_Val> _Node;
         typedef _Alloc allocator_type;
@@ -199,6 +204,206 @@ __STL_BEGIN_NAMESPACE
             _M_initialize_buckets(__n);
         }
 
+        hashtable(size_type __n,
+                  const _HashFcn &__hf,
+                  const _EqualKey &__eql,
+                  const allocator_type &__a = allocator_type())
+                : __HASH_ALLOC_INIT(__a)
+                  _M_hash(__hf),
+                  _M_equals(__eql),
+                  _M_get_key(_ExtractKey()),
+                  _M_buckets(__a),
+                  _M_num_elements(0) {
+            _M_initialize_buckets(__n);
+        }
+
+        hashtable(const hashtable &__ht)
+                : __HASH_ALLOC_INIT(__ht.get_allocator())
+                  _M_hash(__ht._M_hash),
+                  _M_equals(__ht._M_equals),
+                  _M_get_key(__ht._M_get_key),
+                  _M_buckets(__ht.get_allocator()),
+                  _M_num_elements(0) {
+            _M_copy_from(__ht);
+        }
+
+#undef __HASH_ALLOC_INIT
+
+        hashtable &operator=(const hashtable &__ht) {
+            if (&__ht != this) {
+                clear();
+                _M_hash = __ht._M_hash;
+                _M_equals = __ht._M_equals;
+                _M_get_key = __ht._M_get_key;
+                _M_copy_from(__ht);
+            }
+            return *this;
+        }
+
+        ~hashtable() {
+            clear();
+        }
+
+        size_type size() const {
+            return _M_num_elements;
+        }
+
+        size_type max_size() const {
+            return size_type(-1);
+        }
+
+        bool empty() const {
+            return size() == 0;
+        }
+
+        void swap(hashtable &__ht) {
+            sakura_stl::swap(_M_hash, __ht._M_hash);
+            sakura_stl::swap(_M_equals, __ht._M_equals);
+            sakura_stl::swap(_M_get_key, __ht._M_get_key);
+            _M_buckets.swap(__ht._M_buckets);
+            sakura_stl::swap(_M_num_elements, __ht._M_num_elements);
+        }
+
+        iterator begin() {
+            for (size_type __n = 0; __n < _M_buckets.size(); ++__n) {
+                if (_M_buckets[__n]) {
+                    return iterator(_M_buckets[__n], this);
+                }
+            }
+            return end();
+        }
+
+        iterator end() {
+            return iterator(0, this);
+        }
+
+        template<class _Vl, class _Ky, class _HF, class _Ex, class _Eq, class _Al>
+        friend bool operator==(const hashtable<_Vl, _Ky, _HF, _Ex, _Eq, _Al> &,
+                               const hashtable<_Vl, _Ky, _HF, _Ex, _Eq, _Al> &);
+
+    public:
+        size_type bucket_count() const {
+            return _M_buckets.size();
+        }
+
+        size_type max_bucket_count() const { return __stl_prime_list[(int) __stl_num_primes - 1]; }
+
+        //在某个bucket上的元素个数
+        size_type elems_in_bucket(size_type __bucket) const {
+            size_type __result = 0;
+            for (_Node *__cur = _M_buckets[__bucket]; __cur; __cur = __cur->_M_next) {
+                __result += 1;
+            }
+        }
+
+        pair<iterator, bool> insert_unique(const value_type &__obj) {
+            resize(_M_num_elements + 1);
+            return insert_unique_noresize(__obj);
+        }
+
+        iterator insert_equal(const value_type &__obj) {
+            resize(_M_num_elements + 1);
+            return insert_equal_noresize(__obj);
+        }
+
+        pair<iterator, bool> insert_unique_noresize(const value_type &__obj);
+
+        iterator insert_equal_noresize(const value_type &__obj);
+
+        template<class _InputIterator>
+        void insert_unique(_InputIterator __f, _InputIterator __l) {
+            insert_unique(__f, __l, __ITERATOR_CATEGORY(__f));
+        }
+
+        template<class _InputIterator>
+        void insert_equal(_InputIterator __f, _InputIterator __l) {
+            insert_equal(__f, __l, __ITERATOR_CATEGORY(__f));
+        }
+
+        template<class _InputIterator>
+        void insert_unique(_InputIterator __f, _InputIterator __l, input_iterator_tag) {
+            for (; __f != __l; ++__f) {
+                insert_unique(*__f);
+            }
+        }
+
+        template<class _InputIterator>
+        void insert_equal(_InputIterator __f, _InputIterator __l,
+                          input_iterator_tag) {
+            for (; __f != __l; ++__f)
+                insert_equal(*__f);
+        }
+
+        template<class _ForwardIterator>
+        void insert_unique(_ForwardIterator __f, _ForwardIterator __l,
+                           forward_iterator_tag) {
+            size_type __n = 0;
+            distance(__f, __l, __n);
+            resize(_M_num_elements + __n);
+            for (; __n > 0; --__n, ++__f)
+                insert_unique_noresize(*__f);
+        }
+
+        template<class _ForwardIterator>
+        void insert_equal(_ForwardIterator __f, _ForwardIterator __l,
+                          forward_iterator_tag) {
+            size_type __n = 0;
+            distance(__f, __l, __n);
+            resize(_M_num_elements + __n);
+            for (; __n > 0; --__n, ++__f)
+                insert_equal_noresize(*__f);
+        }
+
+        reference find_or_insert(const value_type &__obj);
+
+        iterator find(const key_type &__key) {
+            size_type __n = _M_bkt_num_key(__key);
+            _Node *__first;
+            for (__first = _M_buckets[__n];
+                 __first && !_M_equals(_M_get_key(__first->_M_val), __key);
+                 __first = __first->_M_next) {}
+            return iterator(__first, this);
+        }
+
+        const_iterator find(const key_type &__key) const {
+            size_type __n = _M_bkt_num_key(__key);
+            const _Node *__first;
+            for (__first = _M_buckets[__n];
+                 __first && !_M_equals(_M_get_key(__first->_M_val), __key);
+                 __first = __first->_M_next) {}
+            return const_iterator(__first, this);
+        }
+
+        size_type count(const key_type &__key) const {
+            const size_type __n = _M_bkt_num_key(__key);
+            size_type __result = 0;
+
+            for (const _Node *__cur = _M_buckets[__n]; __cur; __cur = __cur->_M_next)
+                if (_M_equals(_M_get_key(__cur->_M_val), __key))
+                    ++__result;
+            return __result;
+        }
+
+        pair<iterator, iterator>
+        equal_range(const key_type &__key);
+
+        pair<const_iterator, const_iterator>
+        equal_range(const key_type &__key) const;
+
+        size_type erase(const key_type &__key);
+
+        void erase(const iterator &__it);
+
+        void erase(iterator __first, iterator __last);
+
+        void erase(const const_iterator &__it);
+
+        void erase(const_iterator __first, const_iterator __last);
+
+        void resize(size_type __num_elements_hint);
+
+        void clear();
+
     private:
         size_type _M_next_size(size_type __n) const {
             return __stl_next_prime(__n);
@@ -211,7 +416,91 @@ __STL_BEGIN_NAMESPACE
             _M_num_elements = 0;
         }
 
+        size_type _M_bkt_num_key(const key_type &__key) const {
+            return _M_bkt_num_key(__key, _M_buckets.size());
+        }
 
+        size_type _M_bkt_num_key(const key_type &__key, size_t __n) const {
+            return _M_hash(__key) % __n;
+        }
+
+        size_type _M_bkt_num(const value_type &__obj) const {
+            return _M_bkt_num_key(_M_get_key(__obj));
+        }
+
+        size_type _M_bkt_num(const value_type &__obj, size_t __n) const {
+            return _M_bkt_num_key(_M_get_key(__obj), __n);
+        }
+
+        _Node *_M_new_node(const value_type &__obj) {
+            _Node *__n = _M_get_node();
+            __n->_M_next = 0;
+            try {
+                construct(&__n->_M_val, __obj);
+                return __n;
+            }
+            catch (...) {
+                _M_put_node(__n);
+            }
+        }
+
+        void _M_delete_node(_Node *__n) {
+            destroy(&__n->_M_val);
+            _M_put_node(__n);
+        }
+
+        void _M_erase_bucket(const size_type __n, _Node *__first, _Node *__last);
+
+        void _M_erase_bucket(const size_type __n, _Node *__last);
+
+        void _M_copy_from(const hashtable &__ht);
     };
+
+    template<class _Val, class _Key, class _HF, class _ExK, class _EqK, class _All>
+    _Hashtable_iterator<_Val, _Key, _HF, _ExK, _EqK, _All> &
+    _Hashtable_iterator<_Val, _Key, _HF, _ExK, _EqK, _All>::operator++() {
+        const _Node *__old = _M_cur;
+        _M_cur = _M_cur->_M_next;
+        if (!_M_cur) {
+            size_type __bucket = _M_ht->_M_bkt_num(__old->_M_val);
+            while (!_M_cur && ++__bucket < _M_ht->_M_buckets.size()) {
+                _M_cur = _M_ht->_M_buckets[__bucket];
+            }
+        }
+        return *this;
+    }
+
+    template<class _Val, class _Key, class _HF, class _ExK, class _EqK,
+            class _All>
+    inline _Hashtable_iterator<_Val, _Key, _HF, _ExK, _EqK, _All>
+    _Hashtable_iterator<_Val, _Key, _HF, _ExK, _EqK, _All>::operator++(int) {
+        iterator __tmp = *this;
+        ++*this;
+        return __tmp;
+    }
+
+    template<class _Val, class _Key, class _HF, class _ExK, class _EqK,
+            class _All>
+    _Hashtable_const_iterator<_Val, _Key, _HF, _ExK, _EqK, _All> &
+    _Hashtable_const_iterator<_Val, _Key, _HF, _ExK, _EqK, _All>::operator++() {
+        const _Node *__old = _M_cur;
+        _M_cur = _M_cur->_M_next;
+        if (!_M_cur) {
+            size_type __bucket = _M_ht->_M_bkt_num(__old->_M_val);
+            while (!_M_cur && ++__bucket < _M_ht->_M_buckets.size())
+                _M_cur = _M_ht->_M_buckets[__bucket];
+        }
+        return *this;
+    }
+
+    template<class _Val, class _Key, class _HF, class _ExK, class _EqK,
+            class _All>
+    inline _Hashtable_const_iterator<_Val, _Key, _HF, _ExK, _EqK, _All>
+    _Hashtable_const_iterator<_Val, _Key, _HF, _ExK, _EqK, _All>::operator++(int) {
+        const_iterator __tmp = *this;
+        ++*this;
+        return __tmp;
+    }
+
 __STL_END_NAMESPACE
 #endif //SAKURA_STL_STL_HASHTABLE_H
