@@ -10,6 +10,7 @@
 #include "stl_iterator.h"
 #include "stl_algo.h"
 #include "stl_vector.h"
+
 __STL_BEGIN_NAMESPACE
     template<class _Val>
     struct _Hashtable_node {
@@ -158,37 +159,59 @@ __STL_BEGIN_NAMESPACE
         typedef const value_type *const_pointer;
         typedef value_type &reference;
         typedef const value_type &const_reference;
-//        hasher hash_funct() const{
-//            return _M_hash;
-//        }
+
     private:
         typedef _Hashtable_node<_Val> _Node;
-    public:
-        typedef typename _Alloc_traits<_Val, _Alloc>::allocator_type allocator_type;
+        typedef _Alloc allocator_type;
 
-        allocator_type get_allocator() const {
-            return _M_node_allocator;
-        }
+        allocator_type get_allocator() const { return allocator_type(); }
 
     private:
-        typename _Alloc_traits<_Node, _Alloc>::allocator_type _M_node_allocator;
+        typedef simple_alloc<_Node, _Alloc> _M_node_allocator_type;
 
-        _Node *_M_get_node() {
-            return _M_node_allocator.allocate(1);
-        }
+        _Node *_M_get_node() { return _M_node_allocator_type::allocate(1); }
 
-        void _M_put_node(_Node *__p) {
-            _M_node_allocator.deallocate(__p, 1);
-        }
+        void _M_put_node(_Node *__p) { _M_node_allocator_type::deallocate(__p, 1); }
 
-#define __HASH_ALLOC_INIT(__a) _M_node_allocator(__a),
+#define __HASH_ALLOC_INIT(__a)
     private:
         hasher _M_hash;
         key_equal _M_equals;
         _ExtractKey _M_get_key;
-        vector<_Node*, _Alloc> _M_buckets;
+        vector<_Node *, _Alloc> _M_buckets;
         size_type _M_num_elements;
     public:
+        typedef _Hashtable_iterator<_Val, _Key, _HashFcn, _ExtractKey, _EqualKey, _Alloc> iterator;
+        typedef _Hashtable_const_iterator<_Val, _Key, _HashFcn, _ExtractKey, _EqualKey, _Alloc> const_iterator;
+        friend struct
+                _Hashtable_iterator<_Val, _Key, _HashFcn, _ExtractKey, _EqualKey, _Alloc>;
+        friend struct
+                _Hashtable_const_iterator<_Val, _Key, _HashFcn, _ExtractKey, _EqualKey, _Alloc>;
+    public:
+        hashtable(size_type __n, const _HashFcn &__hf, const _EqualKey &__eql, const _ExtractKey &__ext,
+                  const allocator_type &__a = allocator_type())
+                : __HASH_ALLOC_INIT(__a)
+                  _M_hash(__hf),
+                  _M_equals(__eql),
+                  _M_get_key(__ext),
+                  _M_buckets(__a),
+                  _M_num_elements(0) {
+            _M_initialize_buckets(__n);
+        }
+
+    private:
+        size_type _M_next_size(size_type __n) const {
+            return __stl_next_prime(__n);
+        }
+
+        void _M_initialize_buckets(size_type __n) {
+            const size_type __n_buckets = _M_next_size(__n);
+            _M_buckets.reserve(__n_buckets);
+            _M_buckets.insert(_M_buckets.end(), __n_buckets, (_Node *) 0);
+            _M_num_elements = 0;
+        }
+
+
     };
 __STL_END_NAMESPACE
 #endif //SAKURA_STL_STL_HASHTABLE_H

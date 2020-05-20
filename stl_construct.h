@@ -27,7 +27,7 @@ __STL_BEGIN_NAMESPACE
     template<class _Tp>
     void destroy_one(_Tp *pointer, __false_type) {
         if (pointer != nullptr) {
-            pointer->~Ty();
+            pointer->~Tp();
         }
     }
 

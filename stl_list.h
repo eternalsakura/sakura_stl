@@ -92,49 +92,30 @@ __STL_BEGIN_NAMESPACE
         }
     };
 
-    template<class _Tp, class _Allocator, bool _IsStatic>
-    class _List_alloc_base {
+    template<class _Tp, class _Alloc>
+    class _List_base {
     public:
-        typedef typename _Alloc_traits<_Tp, _Allocator>::allocator_type allocator_type;
-
-        allocator_type get_allocator() const {
-            return _Node_allocator;
-        }
-
-        _List_alloc_base(const allocator_type &__a) : _Node_allocator(__a) {}
-
-    protected:
-        _List_node<_Tp> *_M_get_node() {
-            return _Node_allocator.allocate(1);
-        }
-
-        void _M_put_node(_List_node<_Tp> *__p) {
-            _Node_allocator.deallocate(__p, 1);
-        }
-
-    protected:
-        typename _Alloc_traits<_List_node<_Tp>, _Allocator>::allocator_type
-                _Node_allocator;
-        _List_node<_Tp> *_M_node;
-    };
-
-    // Specialization for instanceless allocators.
-
-    template<class _Tp, class _Allocator>
-    class _List_alloc_base<_Tp, _Allocator, true> {
-    public:
-        typedef typename _Alloc_traits<_Tp, _Allocator>::allocator_type
-                allocator_type;
+        typedef _Alloc allocator_type;
 
         allocator_type get_allocator() const { return allocator_type(); }
 
-        _List_alloc_base(const allocator_type &) {}
+        _List_base(const allocator_type &) {
+            _M_node = _M_get_node();
+            _M_node->_M_next = _M_node;
+            _M_node->_M_prev = _M_node;
+        }
+
+        ~_List_base() {
+            clear();
+            _M_put_node(_M_node);
+        }
+
+        void clear();
 
     protected:
-        typedef typename _Alloc_traits<_List_node<_Tp>, _Allocator>::_Alloc_type
-                _Alloc_type;
+        typedef simple_alloc<_List_node<_Tp>, _Alloc> _Alloc_type;
 
-        _List_node<_Tp> *_M_get_node() {return _Alloc_type::allocate(1); }
+        _List_node<_Tp> *_M_get_node() { return _Alloc_type::allocate(1); }
 
         void _M_put_node(_List_node<_Tp> *__p) { _Alloc_type::deallocate(__p, 1); }
 
@@ -143,36 +124,20 @@ __STL_BEGIN_NAMESPACE
     };
 
     template<class _Tp, class _Alloc>
-    class _List_base : public _List_alloc_base<_Tp, _Alloc, _Alloc_traits<_Tp, _Alloc>::_S_instanceless> {
-    public:
-        typedef _List_alloc_base<_Tp, _Alloc, _Alloc_traits<_Tp, _Alloc>::_S_instanceless> _Base;
-        typedef typename _Base::allocator_type allocator_type;
-
-        _List_base(const allocator_type &__a) : _Base(__a) {
-            this->_M_node = this->_M_get_node();
-            this->_M_node->_M_next = this->_M_node;
-            this->_M_node->_M_prev = this->_M_node;
+    void
+    _List_base<_Tp, _Alloc>::clear() {
+        _List_node<_Tp> *__cur = (_List_node<_Tp> *) _M_node->_M_next;
+        while (__cur != _M_node) {
+            _List_node<_Tp> *__tmp = __cur;
+            __cur = (_List_node<_Tp> *) __cur->_M_next;
+            _Destroy(&__tmp->_M_data);
+            _M_put_node(__tmp);
         }
+        _M_node->_M_next = _M_node;
+        _M_node->_M_prev = _M_node;
+    }
 
-        ~_List_base() {
-            clear();
-            this->_M_put_node(this->_M_node);
-        }
-
-        void clear() {
-            _List_node<_Tp> *__cur = (_List_node<_Tp> *) (this->_M_node)->_M_next;
-            while (__cur != this->_M_node) {
-                _List_node<_Tp> *__tmp = __cur;
-                __cur = (_List_node<_Tp> *) __cur->_M_next;
-                _Destroy(&__tmp->_M_data);
-                this->_M_put_node(__tmp);
-            }
-            this->_M_node->_M_next = this->_M_node;
-            this->_M_node->_M_prev = this->_M_node;
-        }
-    };
-
-    template<class _Tp, class _Alloc = allocator<_Tp>>
+    template<class _Tp, class _Alloc = alloc>
     class list : protected _List_base<_Tp, _Alloc> {
         typedef _List_base<_Tp, _Alloc> _Base;
     protected:
@@ -189,7 +154,8 @@ __STL_BEGIN_NAMESPACE
         typedef typename _Base::allocator_type allocator_type;
 
         allocator_type get_allocator() const {
-            return _Base::get_allocator(); }
+            return _Base::get_allocator();
+        }
 
     public:
         typedef _List_iterator<_Tp, _Tp &, _Tp *> iterator;
