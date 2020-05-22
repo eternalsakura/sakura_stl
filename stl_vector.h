@@ -358,6 +358,7 @@ __STL_BEGIN_NAMESPACE
                 return __result;
             } catch (...) {
                 _M_deallocate(__result, __n);
+                throw;
             }
         }
 
@@ -501,6 +502,7 @@ __STL_BEGIN_NAMESPACE
             catch (...) {
                 destroy(__new_start, __new_finish);
                 _M_deallocate(__new_start, __len);
+                throw;
             }
             destroy(begin(), end());
             _M_deallocate(_M_start, _M_end_of_storage - _M_start);
@@ -531,6 +533,7 @@ __STL_BEGIN_NAMESPACE
             catch (...) {
                 destroy(__new_start, __new_finish);
                 _M_deallocate(__new_start, __len);
+                throw;
             }
             destroy(begin(), end());
             _M_deallocate(_M_start, _M_end_of_storage - _M_start);
@@ -574,6 +577,7 @@ __STL_BEGIN_NAMESPACE
                 catch (...) {
                     destroy(__new_start, __new_finish);
                     _M_deallocate(__new_start, __len);
+                    throw;
                 }
                 destroy(_M_start, _M_finish);
                 _M_deallocate(_M_start, _M_end_of_storage - _M_start);
@@ -635,6 +639,7 @@ __STL_BEGIN_NAMESPACE
                 catch (...) {
                     destroy(__new_start, __new_finish);
                     _M_deallocate(__new_start, __len);
+                    throw;
                 }
                 destroy(_M_start, _M_finish);
                 _M_deallocate(_M_start, _M_end_of_storage - _M_start);

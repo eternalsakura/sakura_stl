@@ -8,7 +8,7 @@
 #include <new>
 #include "stl_config.h"
 #include "type_traits.h"
-
+#include "stl_iterator_base.h"
 __STL_BEGIN_NAMESPACE
 
     template<class _T1, class _T2>

@@ -441,6 +441,7 @@ __STL_BEGIN_NAMESPACE
             }
             catch (...) {
                 _M_put_node(__n);
+                throw;
             }
         }
 
@@ -782,14 +783,23 @@ __STL_BEGIN_NAMESPACE
                 vector<_Node *, _All> __tmp(__n, (_Node *) (0),
                                             _M_buckets.get_allocator());
                 try {
+                    //遍历之前的bucket
                     for (size_type __bucket = 0; __bucket < __old_n; ++__bucket) {
+                        //令first指针指向bucket的首节点
                         _Node *__first = _M_buckets[__bucket];
                         while (__first) {
+                            //找出first节点落在新buckets的哪一个bucket里
                             size_type __new_bucket = _M_bkt_num(__first->_M_val, __n);
+                            //另bucket的首节点为原first节点的下一个节点
                             _M_buckets[__bucket] = __first->_M_next;
+                            //另first的下一个节点指向新bucket的首节点
                             __first->_M_next = __tmp[__new_bucket];
+                            //另新bucket的首节点为first
                             __tmp[__new_bucket] = __first;
+                            //往下遍历一个，将first指向旧bucket的现在的首节点（也就是原先的下一个节点),直到
+                            //first为nullptr。
                             __first = _M_buckets[__bucket];
+                            //于是最终就通过头插的方法把原bucket的每个节点处理好了。
                         }
                     }
                     _M_buckets.swap(__tmp);
@@ -850,6 +860,7 @@ __STL_BEGIN_NAMESPACE
         }
         catch (...) {
             clear();
+            throw;
         }
     }
 __STL_END_NAMESPACE

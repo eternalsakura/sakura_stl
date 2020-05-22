@@ -175,6 +175,7 @@ __STL_BEGIN_NAMESPACE
             }
             catch (...) {
                 _M_put_node(__p);
+                throw;
             }
             return __p;
         }
@@ -186,6 +187,7 @@ __STL_BEGIN_NAMESPACE
             }
             catch (...) {
                 _M_put_node(__p);
+                throw;
             }
             return __p;
         }
